@@ -8,11 +8,14 @@ type commonOptions struct {
 	baseTime  string
 	duration  string
 	rangeType string
-	query     string
+
+	mode string
+	addr string
 }
 
 func (x *commonOptions) Flags() []cli.Flag {
 	return []cli.Flag{
+		// for period
 		&cli.StringFlag{
 			Name:        "base-time",
 			Aliases:     []string{"t"},
@@ -36,12 +39,23 @@ func (x *commonOptions) Flags() []cli.Flag {
 			Value:       "before",
 			Destination: &x.rangeType,
 		},
+
+		// mode
 		&cli.StringFlag{
-			Name:        "jq",
-			Aliases:     []string{"j"},
-			EnvVars:     []string{"SPOUT_JQ"},
-			Usage:       "jq ",
-			Destination: &x.query,
+			Name:        "mode",
+			Aliases:     []string{"m"},
+			EnvVars:     []string{"SPOUT_MODE"},
+			Usage:       "Run mode [console|browser]",
+			Value:       "browser",
+			Destination: &x.mode,
+		},
+		&cli.StringFlag{
+			Name:        "addr",
+			Aliases:     []string{"a"},
+			EnvVars:     []string{"SPOUT_ADDR"},
+			Usage:       "Server address for browser mode",
+			Value:       "127.0.0.1:3280",
+			Destination: &x.addr,
 		},
 	}
 }

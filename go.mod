@@ -5,6 +5,7 @@ go 1.18
 require (
 	cloud.google.com/go/logging v1.5.0
 	github.com/BurntSushi/toml v1.1.0
+	github.com/go-chi/chi/v5 v5.0.7
 	github.com/m-mizutani/goerr v0.1.7
 	github.com/m-mizutani/gots v0.0.0-20220724034137-07fb246ce3be
 	github.com/m-mizutani/zlog v0.3.2

@@ -3,12 +3,14 @@ package cmd
 import (
 	"os"
 
+	"github.com/m-mizutani/spout/pkg/controller/server"
 	"github.com/m-mizutani/spout/pkg/infra"
 	"github.com/m-mizutani/spout/pkg/infra/gcp"
 	"github.com/m-mizutani/spout/pkg/model"
 	"github.com/m-mizutani/spout/pkg/usecase"
 	"github.com/m-mizutani/spout/pkg/utils"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/sync/errgroup"
 )
 
 func cmdGCP(globalCfg *config) *cli.Command {
@@ -57,6 +59,11 @@ func cmdGCP(globalCfg *config) *cli.Command {
 				return err
 			}
 
+			mode, err := model.ToRunMode(commonOpt.mode)
+			if err != nil {
+				return err
+			}
+
 			var options []gcp.Option
 			if localCfg.Filter != "" {
 				options = append(options, gcp.WithFilter(localCfg.Filter))
@@ -71,8 +78,30 @@ func cmdGCP(globalCfg *config) *cli.Command {
 				model.WithCtx(c.Context),
 			)
 
-			if err := usecase.New(clients).DumpLogs(ctx); err != nil {
-				return err
+			uc := usecase.New(clients)
+
+			switch mode {
+			case model.ConsoleMode:
+				if err := uc.DumpLogs(ctx); err != nil {
+					return err
+				}
+
+			case model.BrowserMode:
+				errgp, ectx := errgroup.WithContext(ctx)
+				ctx = ctx.New(model.WithCtx(ectx))
+
+				errgp.Go(func() error {
+					return usecase.New(clients).ImportLogs(ctx)
+				})
+
+				errgp.Go(func() error {
+					utils.Logger.Info("starting server http://%s", commonOpt.addr)
+					return server.New(uc).Listen(commonOpt.addr)
+				})
+
+				if err := errgp.Wait(); err != nil {
+					return err
+				}
 			}
 
 			return nil

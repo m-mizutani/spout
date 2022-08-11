@@ -21,3 +21,13 @@ func WithCtx(base context.Context) CtxOption {
 		ctx.Context = base
 	}
 }
+
+func (x *Context) New(options ...CtxOption) *Context {
+	newCtx := *x
+
+	for _, opt := range options {
+		opt(&newCtx)
+	}
+
+	return &newCtx
+}

@@ -7,3 +7,8 @@ import (
 type LogReader interface {
 	Get(ctx *model.Context) (chan *model.Message, error)
 }
+
+type Repository interface {
+	Put(ctx *model.Context, logs ...*model.Log) error
+	Get(ctx *model.Context, opt *model.RepositoryGetOption) ([]*model.Log, error)
+}
