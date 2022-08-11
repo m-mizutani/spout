@@ -8,6 +8,7 @@ import (
 
 	"github.com/m-mizutani/goerr"
 	"github.com/m-mizutani/spout/pkg/model"
+	"github.com/m-mizutani/spout/pkg/utils"
 )
 
 type Client struct {
@@ -30,7 +31,11 @@ func readFile(path string, ch chan *model.Message) {
 		}
 		return
 	}
-	defer fd.Close()
+	defer func() {
+		if err := fd.Close(); err != nil {
+			utils.Logger.With("error", err.Error()).Warn("failed to close local log file")
+		}
+	}()
 
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
