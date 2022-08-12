@@ -2,11 +2,16 @@ package server
 
 import (
 	"encoding/json"
+	"io/fs"
+	"mime"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/m-mizutani/goerr"
+	"github.com/m-mizutani/spout/frontend"
 	"github.com/m-mizutani/spout/pkg/model"
 	"github.com/m-mizutani/spout/pkg/usecase"
 	"github.com/m-mizutani/spout/pkg/utils"
@@ -29,6 +34,10 @@ func New(uc *usecase.Usecase) *Server {
 			r.Get("/", hdlr.serve(getLogs))
 		})
 	})
+
+	if err := importStaticFiles(r); err != nil {
+		panic("failed to import static file" + err.Error())
+	}
 
 	return &Server{
 		mux: r,
@@ -84,4 +93,52 @@ func (x *handler) serve(f apiHandler) http.HandlerFunc {
 			utils.Logger.Err(err).Error("marshal http response message")
 		}
 	}
+}
+
+func importStaticFiles(r chi.Router) error {
+	assets := frontend.Assets()
+	if err := fs.WalkDir(assets, ".", func(filePath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return goerr.Wrap(err)
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		path := strings.TrimPrefix(filePath, "out")
+		if path == "" {
+			return nil
+		}
+
+		body, err := assets.ReadFile(filePath)
+		if err != nil {
+			return goerr.Wrap(err)
+		}
+		mimeType := mime.TypeByExtension(filepath.Ext(filePath))
+
+		utils.Logger.With("path", filePath).With("type", mimeType).Trace("set static file")
+
+		handler := func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", mimeType)
+			w.WriteHeader(http.StatusOK)
+			if _, err := w.Write(body); err != nil {
+				utils.Logger.Err(err).Error("failed to response static file")
+			}
+		}
+
+		r.Get(path, handler)
+		if strings.HasSuffix(path, "/index.html") {
+			r.Get(strings.TrimSuffix(path, "index.html"), handler)
+		} else if strings.HasSuffix(path, ".html") {
+			// e.g. out/verify/email.html
+			indexPath := strings.TrimSuffix(path, ".html")
+			r.Get(indexPath, handler)
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
