@@ -94,9 +94,10 @@ func (x *Client) Get(ctx *model.Context) (chan *model.Message, error) {
 			}
 
 			ch <- &model.Message{
-				Log: &model.Log{
-					Timestamp: entry.Timestamp,
-					Data: &model.CloudLoggingLog{
+				Log: model.NewLog(
+					&entry.Timestamp,
+					"",
+					&model.CloudLoggingLog{
 						Severity: entry.Severity.String(),
 						InsertID: entry.InsertID,
 						Payload:  payload,
@@ -105,7 +106,7 @@ func (x *Client) Get(ctx *model.Context) (chan *model.Message, error) {
 						Trace:    entry.Trace,
 						SpanID:   entry.SpanID,
 					},
-				},
+				),
 			}
 		}
 	}()

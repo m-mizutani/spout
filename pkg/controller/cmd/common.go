@@ -1,19 +1,26 @@
 package cmd
 
 import (
+	"github.com/m-mizutani/spout/pkg/controller/server"
+	"github.com/m-mizutani/spout/pkg/model"
+	"github.com/m-mizutani/spout/pkg/usecase"
+	"github.com/m-mizutani/spout/pkg/utils"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/sync/errgroup"
 )
 
-type commonOptions struct {
+type periodOptions struct {
 	baseTime  string
 	duration  string
 	rangeType string
+}
 
+type runOptions struct {
 	mode string
 	addr string
 }
 
-func (x *commonOptions) Flags() []cli.Flag {
+func (x *periodOptions) Flags() []cli.Flag {
 	return []cli.Flag{
 		// for period
 		&cli.StringFlag{
@@ -39,7 +46,11 @@ func (x *commonOptions) Flags() []cli.Flag {
 			Value:       "before",
 			Destination: &x.rangeType,
 		},
+	}
+}
 
+func (x *runOptions) Flags() []cli.Flag {
+	return []cli.Flag{
 		// mode
 		&cli.StringFlag{
 			Name:        "mode",
@@ -58,4 +69,44 @@ func (x *commonOptions) Flags() []cli.Flag {
 			Destination: &x.addr,
 		},
 	}
+}
+
+func run(ctx *model.Context, uc *usecase.Usecase, opt *runOptions) error {
+	mode, err := model.ToRunMode(opt.mode)
+	if err != nil {
+		return err
+	}
+
+	switch mode {
+	case model.ConsoleMode:
+		if err := uc.DumpLogs(ctx); err != nil {
+			return err
+		}
+
+	case model.BrowserMode:
+		errgp, ectx := errgroup.WithContext(ctx)
+		ctx = ctx.New(model.WithCtx(ectx))
+
+		errgp.Go(func() error {
+			if err := uc.ImportLogs(ctx); err != nil {
+				utils.Logger.With("error", err.Error()).Error("failed to import logs")
+			}
+			return nil
+		})
+
+		errgp.Go(func() error {
+			utils.Logger.Info("starting server http://%s", opt.addr)
+			if err := server.New(uc).Listen(opt.addr); err != nil {
+				utils.Logger.With("error", err.Error()).Error("failed to import logs")
+				return err
+			}
+			return nil
+		})
+
+		if err := errgp.Wait(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

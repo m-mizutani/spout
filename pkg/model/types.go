@@ -1,10 +1,17 @@
 package model
 
-import "github.com/m-mizutani/goerr"
+import (
+	"github.com/google/uuid"
+	"github.com/m-mizutani/goerr"
+)
 
 type (
+	LogID string
+
 	RunMode int
 )
+
+func NewLogID() LogID { return LogID(uuid.NewString()) }
 
 const (
 	ConsoleMode RunMode = iota + 1

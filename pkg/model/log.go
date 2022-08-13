@@ -8,7 +8,17 @@ type Message struct {
 }
 
 type Log struct {
-	Timestamp time.Time `json:"timestamp"`
-	Tag       string    `json:"tag"`
-	Data      any       `json:"data"`
+	ID        LogID
+	Timestamp *time.Time `json:"timestamp"`
+	Tag       string     `json:"tag"`
+	Data      any        `json:"data"`
+}
+
+func NewLog(ts *time.Time, tag string, data any) *Log {
+	return &Log{
+		ID:        NewLogID(),
+		Timestamp: ts,
+		Tag:       tag,
+		Data:      data,
+	}
 }

@@ -3,6 +3,7 @@ package mock
 import (
 	"time"
 
+	"github.com/m-mizutani/gots/ptr"
 	"github.com/m-mizutani/spout/pkg/model"
 )
 
@@ -24,7 +25,7 @@ func (x *LogReader) Get(ctx *model.Context) (chan *model.Message, error) {
 		for i := range x.logs {
 			ch <- &model.Message{
 				Log: &model.Log{
-					Timestamp: time.Now(),
+					Timestamp: ptr.To(time.Now()),
 					Data:      x.logs[i],
 				},
 			}

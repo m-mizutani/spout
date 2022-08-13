@@ -9,11 +9,13 @@ import (
 )
 
 func cmdFile(globalCfg *config) *cli.Command {
+	var runOpt runOptions
 	return &cli.Command{
 		Name:        "file",
 		Aliases:     []string{"f"},
 		Usage:       "[file1, [file2, ...]]",
 		Description: "Read local file logs",
+		Flags:       runOpt.Flags(),
 		Action: func(c *cli.Context) error {
 			reader := file.New(c.Args().Slice())
 			clients := infra.New(
@@ -22,7 +24,7 @@ func cmdFile(globalCfg *config) *cli.Command {
 			uc := usecase.New(clients)
 			ctx := model.NewContext(model.WithCtx(c.Context))
 
-			if err := uc.DumpLogs(ctx); err != nil {
+			if err := run(ctx, uc, &runOpt); err != nil {
 				return err
 			}
 
