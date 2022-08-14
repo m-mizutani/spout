@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"net/url"
+
 	"github.com/m-mizutani/spout/pkg/controller/server"
 	"github.com/m-mizutani/spout/pkg/model"
 	"github.com/m-mizutani/spout/pkg/usecase"
@@ -86,6 +88,10 @@ func run(ctx *model.Context, uc *usecase.Usecase, opt *runOptions) error {
 	case model.BrowserMode:
 		errgp, ectx := errgroup.WithContext(ctx)
 		ctx = ctx.New(model.WithCtx(ectx))
+		uri := &url.URL{
+			Scheme: "http",
+			Host:   opt.addr,
+		}
 
 		errgp.Go(func() error {
 			if err := uc.ImportLogs(ctx); err != nil {
@@ -95,10 +101,17 @@ func run(ctx *model.Context, uc *usecase.Usecase, opt *runOptions) error {
 		})
 
 		errgp.Go(func() error {
-			utils.Logger.Info("starting server http://%s", opt.addr)
+			utils.Logger.Info("starting server %s", uri.String())
 			if err := server.New(uc).Listen(opt.addr); err != nil {
 				utils.Logger.With("error", err.Error()).Error("failed to import logs")
 				return err
+			}
+			return nil
+		})
+
+		errgp.Go(func() error {
+			if err := uc.OpenBrowser(uri); err != nil {
+				utils.Logger.With("error", err.Error()).Error("failed to import logs")
 			}
 			return nil
 		})
