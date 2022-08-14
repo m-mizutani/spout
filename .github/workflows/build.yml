@@ -1,3 +1,5 @@
+name: build
+
 on:
   push:
 #  release:
@@ -20,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
-      - run: cd frontend && npm i && npm run build
+      - run: cd frontend && npm i && npm run export
       - uses: wangyoucao577/go-release-action@v1.30
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
