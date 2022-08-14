@@ -8,6 +8,8 @@ import (
 type (
 	LogID string
 
+	NextToken string
+
 	RunMode int
 )
 

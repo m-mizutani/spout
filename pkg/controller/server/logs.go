@@ -13,20 +13,20 @@ func getLogs(ctx *model.Context, uc *usecase.Usecase, r *http.Request) (*httpRes
 	if v := r.URL.Query().Get("limit"); v != "" {
 		options = append(options, usecase.WithLimit(v))
 	}
-	if v := r.URL.Query().Get("offset"); v != "" {
-		options = append(options, usecase.WithOffset(v))
+	if v := r.URL.Query().Get("token"); v != "" {
+		options = append(options, usecase.WithToken(v))
 	}
 	if v := r.URL.Query().Get("query"); v != "" {
 		options = append(options, usecase.WithQuery(v))
 	}
 
-	logs, err := uc.ExportLogs(ctx, options...)
+	output, err := uc.ExportLogs(ctx, options...)
 	if err != nil {
 		return nil, err
 	}
 
 	return &httpResponse{
 		code: http.StatusOK,
-		data: logs,
+		data: output,
 	}, nil
 }

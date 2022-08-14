@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import JSONPretty from 'react-json-pretty';
 
-import { Box, Container, Input, Alert, Text } from '@chakra-ui/react';
+import { Box, Container, Input, Alert, Text, Button } from '@chakra-ui/react';
 
 const JSONPrettyMon = require('react-json-pretty/dist/1337');
 
@@ -12,15 +12,42 @@ export function Page() {
   const [err, setErr] = useState<string>();
   const [query, setQuery] = useState<string>('');
   const [inputQuery, setInputQuery] = useState<string>('');
-  const [offset, setOffset] = useState<Number>(0);
+  const [nextToken, setNextToken] = useState<string | undefined>();
 
   const getLogs = () => {
     setErr(undefined);
-    const queryParam = new URLSearchParams([
-      ['query', query],
-      ['offset', `${offset}`],
-    ]);
+    const queryParam = new URLSearchParams([['query', query]]);
 
+    fetch(`/api/logs?${queryParam}`)
+      .then((resp) => {
+        if (resp.status !== 200) {
+          throw Error('request failed: ' + resp.statusText);
+        } else {
+          return resp.json();
+        }
+      })
+      .then((resp) => {
+        if (resp === null) {
+          setLogs([]);
+        } else if (resp.error !== undefined) {
+          setErr(resp.error);
+        } else {
+          const data: models.GetLogsResponse = resp;
+          setLogs(data.logs);
+          setNextToken(data.next_token);
+        }
+      })
+      .catch((e) => {
+        setErr(e);
+      });
+  };
+
+  const extendLogs = () => {
+    if (!nextToken) {
+      return;
+    }
+
+    const queryParam = new URLSearchParams([['token', nextToken]]);
     fetch(`/api/logs?${queryParam}`)
       .then((resp) => resp.json())
       .then((resp) => {
@@ -29,11 +56,13 @@ export function Page() {
         } else if (resp.error !== undefined) {
           setErr(resp.error);
         } else {
-          const data: models.Log[] = resp;
-          setLogs(data);
+          const data: models.GetLogsResponse = resp;
+          setLogs(logs.concat(data.logs));
+          setNextToken(data.next_token);
         }
       });
   };
+
   useEffect(getLogs, [query]);
 
   const keyUp = (e: any) => {
@@ -58,18 +87,25 @@ export function Page() {
         <></>
       )}
       {logs.length > 0 ? (
-        logs.map((log) => {
-          return (
-            <Container maxW="4xl" key={log.id} p="6px">
-              <Text fontSize="sm" color="#999">
-                {log.timestamp}
-              </Text>
-              <Container maxW="4xl" background="#1e1e1e" p="15px">
-                <JSONPretty theme={JSONPrettyMon} data={log.data}></JSONPretty>
+        <>
+          {logs.map((log) => {
+            return (
+              <Container maxW="4xl" key={log.id} p="6px">
+                <Text fontSize="sm" color="#999">
+                  {log.timestamp}
+                </Text>
+                <Container maxW="4xl" background="#1e1e1e" p="15px">
+                  <JSONPretty theme={JSONPrettyMon} data={log.data}></JSONPretty>
+                </Container>
               </Container>
-            </Container>
-          );
-        })
+            );
+          })}
+          <Container maxW="4xl" p="10px">
+            <Button size="lg" onClick={extendLogs} disabled={nextToken === null}>
+              Load more
+            </Button>
+          </Container>
+        </>
       ) : (
         <>No logs</>
       )}

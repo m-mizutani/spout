@@ -55,23 +55,12 @@ func (x *Usecase) ImportLogs(ctx *model.Context) error {
 }
 
 type exportLogsOptions struct {
-	offset uint64
-	limit  uint64
-	query  string
+	limit uint64
+	query string
+	token model.NextToken
 }
 
 type ExportLogsOption func(opt *exportLogsOptions) error
-
-func WithOffset(offset string) ExportLogsOption {
-	return func(opt *exportLogsOptions) error {
-		v, err := strconv.ParseUint(offset, 10, 64)
-		if err != nil {
-			return goerr.Wrap(err, "invalid offset")
-		}
-		opt.offset = v
-		return nil
-	}
-}
 
 func WithLimit(limit string) ExportLogsOption {
 	return func(opt *exportLogsOptions) error {
@@ -91,10 +80,16 @@ func WithQuery(q string) ExportLogsOption {
 	}
 }
 
-func (x *Usecase) ExportLogs(ctx *model.Context, options ...ExportLogsOption) ([]*model.Log, error) {
+func WithToken(token string) ExportLogsOption {
+	return func(opt *exportLogsOptions) error {
+		opt.token = model.NextToken(token)
+		return nil
+	}
+}
+
+func (x *Usecase) ExportLogs(ctx *model.Context, options ...ExportLogsOption) (*model.ExportLogsResponse, error) {
 	opt := &exportLogsOptions{
-		limit:  100,
-		offset: 0,
+		limit: 10,
 	}
 
 	for _, f := range options {
@@ -146,14 +141,17 @@ func (x *Usecase) ExportLogs(ctx *model.Context, options ...ExportLogsOption) ([
 		}
 	}
 
-	logs, err := x.clients.Repository().Get(ctx, &model.RepositoryGetOption{
-		Offset: opt.offset,
+	output, err := x.clients.Repository().Get(ctx, &model.RepositoryGetInput{
 		Limit:  opt.limit,
 		Filter: filter,
+		Token:  opt.token,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return logs, nil
+	return &model.ExportLogsResponse{
+		Logs:      output.Logs,
+		NextToken: output.NextToken,
+	}, nil
 }
